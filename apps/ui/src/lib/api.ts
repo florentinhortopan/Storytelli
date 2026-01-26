@@ -110,6 +110,20 @@ const request = async <T = unknown>(
 };
 
 export const api = {
+  getStats: () =>
+    request<{
+      totals: {
+        events: number;
+        people: number;
+        groups: number;
+        places: number;
+      };
+      links: {
+        event_people: number;
+        event_groups: number;
+        event_places: number;
+      };
+    }>("/api/stats"),
   listEvents: () => request<Event[]>("/api/events"),
   createEvent: (data: EventInput) =>
     request("/api/events", { method: "POST", body: JSON.stringify(data) }),
