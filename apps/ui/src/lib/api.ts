@@ -113,6 +113,8 @@ export const api = {
   listEvents: () => request<Event[]>("/api/events"),
   createEvent: (data: EventInput) =>
     request("/api/events", { method: "POST", body: JSON.stringify(data) }),
+  updateEvent: (id: string, data: Partial<EventInput>) =>
+    request(`/api/events/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   listPeople: () => request<Person[]>("/api/people"),
   createPerson: (data: PersonInput) =>
     request("/api/people", { method: "POST", body: JSON.stringify(data) }),
