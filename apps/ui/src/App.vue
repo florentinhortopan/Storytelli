@@ -340,6 +340,8 @@ const renderGraph = (
   if (instance.value) {
     instance.value.json({ elements });
     instance.value.layout({ name: "cose", animate: false }).run();
+    instance.value.resize();
+    instance.value.fit(undefined, 24);
     return;
   }
   instance.value = cytoscape({
@@ -404,6 +406,8 @@ const renderGraph = (
     layout: { name: "cose", animate: false },
     wheelSensitivity: 0.2,
   });
+  instance.value.resize();
+  instance.value.fit(undefined, 24);
 };
 
 watch(
@@ -420,10 +424,20 @@ watch(
 watch(viewMode, () => {
   if (viewMode.value === "graph") {
     setTimeout(() => renderGraph(graphFullRef.value, cyFull), 0);
+  } else {
+    setTimeout(() => renderGraph(graphPreviewRef.value, cyPreview), 0);
   }
 });
 
-onMounted(loadAll);
+onMounted(() => {
+  loadAll();
+  window.addEventListener("resize", () => {
+    renderGraph(graphPreviewRef.value, cyPreview);
+    if (viewMode.value === "graph") {
+      renderGraph(graphFullRef.value, cyFull);
+    }
+  });
+});
 </script>
 
 <template>
@@ -1193,7 +1207,7 @@ button:hover {
 
 .graph-canvas {
   width: 100%;
-  height: 220px;
+  height: 240px;
   border-radius: 12px;
   border: 1px solid #24293a;
   background: #0f111a;
@@ -1209,6 +1223,7 @@ button:hover {
 .graph-full-canvas {
   flex: 1;
   min-height: 420px;
+  width: 100%;
 }
 
 @media (max-width: 960px) {
