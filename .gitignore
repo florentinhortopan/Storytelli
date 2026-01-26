@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+dist
+build
+.DS_Store
+.vite
+.turbo
+.cache
+coverage
+logs
+*.log
+*.tmp
