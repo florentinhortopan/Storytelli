@@ -66,6 +66,72 @@ app.get("/api/stats", async (req, res) => {
   });
 });
 
+app.get("/api/graph", async (req, res) => {
+  const [
+    events,
+    people,
+    groups,
+    places,
+    eventPeople,
+    eventGroups,
+    eventPlaces,
+  ] = await Promise.all([
+    db.query("SELECT id, title FROM events"),
+    db.query("SELECT id, full_name FROM people"),
+    db.query("SELECT id, name FROM groups"),
+    db.query("SELECT id, name FROM places"),
+    db.query("SELECT event_id, person_id FROM event_people"),
+    db.query("SELECT event_id, group_id FROM event_groups"),
+    db.query("SELECT event_id, place_id FROM event_places"),
+  ]);
+
+  const nodes = [
+    ...events.rows.map((row) => ({
+      id: `event:${row.id}`,
+      label: row.title || "Untitled event",
+      type: "event",
+    })),
+    ...people.rows.map((row) => ({
+      id: `person:${row.id}`,
+      label: row.full_name || "Unnamed person",
+      type: "person",
+    })),
+    ...groups.rows.map((row) => ({
+      id: `group:${row.id}`,
+      label: row.name || "Unnamed group",
+      type: "group",
+    })),
+    ...places.rows.map((row) => ({
+      id: `place:${row.id}`,
+      label: row.name || "Unnamed place",
+      type: "place",
+    })),
+  ];
+
+  const edges = [
+    ...eventPeople.rows.map((row) => ({
+      id: `event:${row.event_id}__person:${row.person_id}`,
+      source: `event:${row.event_id}`,
+      target: `person:${row.person_id}`,
+      type: "event_person",
+    })),
+    ...eventGroups.rows.map((row) => ({
+      id: `event:${row.event_id}__group:${row.group_id}`,
+      source: `event:${row.event_id}`,
+      target: `group:${row.group_id}`,
+      type: "event_group",
+    })),
+    ...eventPlaces.rows.map((row) => ({
+      id: `event:${row.event_id}__place:${row.place_id}`,
+      source: `event:${row.event_id}`,
+      target: `place:${row.place_id}`,
+      type: "event_place",
+    })),
+  ];
+
+  res.json({ nodes, edges });
+});
+
 app.get("/api/events", async (req, res) => {
   const result = await db.query(
     "SELECT * FROM events ORDER BY event_date NULLS LAST, title ASC"

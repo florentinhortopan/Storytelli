@@ -124,6 +124,11 @@ export const api = {
         event_places: number;
       };
     }>("/api/stats"),
+  getGraph: () =>
+    request<{
+      nodes: Array<{ id: string; label: string; type: string }>;
+      edges: Array<{ id: string; source: string; target: string; type: string }>;
+    }>("/api/graph"),
   listEvents: () => request<Event[]>("/api/events"),
   createEvent: (data: EventInput) =>
     request("/api/events", { method: "POST", body: JSON.stringify(data) }),

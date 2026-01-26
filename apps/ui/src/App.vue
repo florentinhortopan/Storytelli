@@ -22,6 +22,10 @@ const stats = ref<{
     event_places: number;
   };
 } | null>(null);
+const graphData = ref<{
+  nodes: Array<{ id: string; label: string; type: string }>;
+  edges: Array<{ id: string; source: string; target: string; type: string }>;
+} | null>(null);
 
 const statusOptions = ["draft", "review", "published"];
 
@@ -103,15 +107,17 @@ const loadAll = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const [statsRes, eventsRes, peopleRes, groupsRes, placesRes] =
+    const [statsRes, graphRes, eventsRes, peopleRes, groupsRes, placesRes] =
       await Promise.all([
         api.getStats(),
+        api.getGraph(),
         api.listEvents(),
         api.listPeople(),
         api.listGroups(),
         api.listPlaces(),
       ]);
     stats.value = statsRes;
+    graphData.value = graphRes;
     events.value = eventsRes;
     people.value = peopleRes;
     groups.value = groupsRes;
@@ -300,50 +306,27 @@ const clearSelection = () => {
   selectedIds.value.clear();
 };
 
-const toKey = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-
 const buildGraphElements = () => {
+  if (!graphData.value) return [];
   const elements: cytoscape.ElementDefinition[] = [];
-  const placeNodes = new Map<string, string>();
-  for (const event of events.value) {
-    const eventId = `event:${event.id}`;
+  for (const node of graphData.value.nodes) {
     elements.push({
       data: {
-        id: eventId,
-        label: event.title || "Untitled event",
-        type: "event",
+        id: node.id,
+        label: node.label,
+        type: node.type,
       },
     });
-    if (event.place_text) {
-      const placeLabel = event.place_text.trim();
-      if (placeLabel) {
-        const placeKey = toKey(placeLabel) || placeLabel;
-        let placeId = placeNodes.get(placeKey);
-        if (!placeId) {
-          placeId = `place:${placeKey}`;
-          placeNodes.set(placeKey, placeId);
-          elements.push({
-            data: {
-              id: placeId,
-              label: placeLabel,
-              type: "place",
-            },
-          });
-        }
-        elements.push({
-          data: {
-            id: `${eventId}__${placeId}`,
-            source: eventId,
-            target: placeId,
-            type: "link",
-          },
-        });
-      }
-    }
+  }
+  for (const edge of graphData.value.edges) {
+    elements.push({
+      data: {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        type: edge.type,
+      },
+    });
   }
   return elements;
 };
@@ -384,6 +367,22 @@ const renderGraph = (
         },
       },
       {
+        selector: 'node[type = "person"]',
+        style: {
+          "background-color": "#22c55e",
+          width: "24px",
+          height: "24px",
+        },
+      },
+      {
+        selector: 'node[type = "group"]',
+        style: {
+          "background-color": "#f97316",
+          width: "26px",
+          height: "26px",
+        },
+      },
+      {
         selector: 'node[type = "place"]',
         style: {
           "background-color": "#fbbf24",
@@ -408,7 +407,7 @@ const renderGraph = (
 };
 
 watch(
-  () => events.value,
+  () => graphData.value,
   () => {
     renderGraph(graphPreviewRef.value, cyPreview);
     if (viewMode.value === "graph") {
@@ -1202,10 +1201,13 @@ button:hover {
 
 .graph-full {
   min-height: 520px;
+  height: calc(100vh - 260px);
+  display: flex;
+  flex-direction: column;
 }
 
 .graph-full-canvas {
-  height: 70vh;
+  flex: 1;
   min-height: 420px;
 }
 
