@@ -249,6 +249,87 @@ app.post("/api/places", async (req, res) => {
   res.status(201).json(result.rows[0]);
 });
 
+app.get("/api/organizations", async (req, res) => {
+  const result = await db.query(
+    "SELECT * FROM organizations ORDER BY name ASC"
+  );
+  res.json(result.rows);
+});
+
+app.post("/api/organizations", async (req, res) => {
+  const data = pick(req.body, ["name", "type", "slug", "status"]);
+  const result = await db.query(
+    `INSERT INTO organizations
+      (name, type, slug, status)
+     VALUES
+      ($1,$2,$3,$4)
+     RETURNING *`,
+    [
+      data.name,
+      data.type || null,
+      data.slug || null,
+      data.status || null,
+    ]
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+app.get("/api/sources", async (req, res) => {
+  const result = await db.query("SELECT * FROM sources ORDER BY title ASC");
+  res.json(result.rows);
+});
+
+app.post("/api/sources", async (req, res) => {
+  const data = pick(req.body, ["type", "title", "status"]);
+  const result = await db.query(
+    `INSERT INTO sources
+      (type, title, status)
+     VALUES
+      ($1,$2,$3)
+     RETURNING *`,
+    [data.type || null, data.title, data.status || null]
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+app.get("/api/media", async (req, res) => {
+  const result = await db.query("SELECT * FROM media ORDER BY title ASC");
+  res.json(result.rows);
+});
+
+app.post("/api/media", async (req, res) => {
+  const data = pick(req.body, ["type", "title", "slug"]);
+  const result = await db.query(
+    `INSERT INTO media
+      (type, title, slug)
+     VALUES
+      ($1,$2,$3)
+     RETURNING *`,
+    [data.type || null, data.title, data.slug || null]
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+app.get("/api/online-resources", async (req, res) => {
+  const result = await db.query(
+    "SELECT * FROM online_resources ORDER BY title ASC"
+  );
+  res.json(result.rows);
+});
+
+app.post("/api/online-resources", async (req, res) => {
+  const data = pick(req.body, ["type", "title", "url", "status"]);
+  const result = await db.query(
+    `INSERT INTO online_resources
+      (type, title, url, status)
+     VALUES
+      ($1,$2,$3,$4)
+     RETURNING *`,
+    [data.type || null, data.title, data.url || null, data.status || null]
+  );
+  res.status(201).json(result.rows[0]);
+});
+
 app.post("/api/events/:id/links", async (req, res) => {
   const { type, ids } = req.body;
   const supported = {
