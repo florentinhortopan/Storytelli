@@ -8,6 +8,21 @@ const groups = ref<any[]>([]);
 const places = ref<any[]>([]);
 const errorMessage = ref("");
 const isLoading = ref(false);
+const stats = ref<{
+  totals: {
+    events: number;
+    people: number;
+    groups: number;
+    places: number;
+  };
+  links: {
+    event_people: number;
+    event_groups: number;
+    event_places: number;
+  };
+} | null>(null);
+
+const statusOptions = ["draft", "review", "published"];
 
 const newEvent = reactive({
   title: "",
@@ -19,7 +34,7 @@ const newEvent = reactive({
   tags: "",
   place_text: "",
   slug: "",
-  status: "",
+  status: "draft",
   notes: "",
 });
 
@@ -31,7 +46,7 @@ const newPerson = reactive({
   role: "",
   bio: "",
   slug: "",
-  status: "",
+  status: "draft",
 });
 
 const newGroup = reactive({
@@ -40,7 +55,7 @@ const newGroup = reactive({
   active_from: "",
   active_to: "",
   bio: "",
-  status: "",
+  status: "draft",
 });
 
 const newPlace = reactive({
@@ -51,7 +66,7 @@ const newPlace = reactive({
   active_from: "",
   active_to: "",
   slug: "",
-  status: "",
+  status: "draft",
 });
 
 const formType = ref<"event" | "person" | "group" | "place">("event");
@@ -80,12 +95,15 @@ const loadAll = async () => {
   isLoading.value = true;
   errorMessage.value = "";
   try {
-    const [eventsRes, peopleRes, groupsRes, placesRes] = await Promise.all([
-      api.listEvents(),
-      api.listPeople(),
-      api.listGroups(),
-      api.listPlaces(),
-    ]);
+    const [statsRes, eventsRes, peopleRes, groupsRes, placesRes] =
+      await Promise.all([
+        api.getStats(),
+        api.listEvents(),
+        api.listPeople(),
+        api.listGroups(),
+        api.listPlaces(),
+      ]);
+    stats.value = statsRes;
     events.value = eventsRes;
     people.value = peopleRes;
     groups.value = groupsRes;
@@ -114,7 +132,7 @@ const createEvent = async () => {
       tags: "",
       place_text: "",
       slug: "",
-      status: "",
+      status: "draft",
       notes: "",
     });
     await loadAll();
@@ -135,7 +153,7 @@ const createPerson = async () => {
       role: "",
       bio: "",
       slug: "",
-      status: "",
+      status: "draft",
     });
     await loadAll();
   } catch (error: any) {
@@ -153,7 +171,7 @@ const createGroup = async () => {
       active_from: "",
       active_to: "",
       bio: "",
-      status: "",
+      status: "draft",
     });
     await loadAll();
   } catch (error: any) {
@@ -173,7 +191,7 @@ const createPlace = async () => {
       active_from: "",
       active_to: "",
       slug: "",
-      status: "",
+      status: "draft",
     });
     await loadAll();
   } catch (error: any) {
@@ -288,8 +306,34 @@ onMounted(loadAll);
         </p>
       </div>
       <div class="header-meta">
-        <span class="muted">Events: {{ events.length }}</span>
-        <span class="muted">People: {{ people.length }}</span>
+        <div class="stat">
+          <span class="muted">Events</span>
+          <strong>{{ stats?.totals.events ?? events.length }}</strong>
+        </div>
+        <div class="stat">
+          <span class="muted">People</span>
+          <strong>{{ stats?.totals.people ?? people.length }}</strong>
+        </div>
+        <div class="stat">
+          <span class="muted">Groups</span>
+          <strong>{{ stats?.totals.groups ?? groups.length }}</strong>
+        </div>
+        <div class="stat">
+          <span class="muted">Places</span>
+          <strong>{{ stats?.totals.places ?? places.length }}</strong>
+        </div>
+        <div class="stat">
+          <span class="muted">Event ↔ People</span>
+          <strong>{{ stats?.links.event_people ?? 0 }}</strong>
+        </div>
+        <div class="stat">
+          <span class="muted">Event ↔ Groups</span>
+          <strong>{{ stats?.links.event_groups ?? 0 }}</strong>
+        </div>
+        <div class="stat">
+          <span class="muted">Event ↔ Places</span>
+          <strong>{{ stats?.links.event_places ?? 0 }}</strong>
+        </div>
       </div>
     </header>
 
@@ -373,7 +417,11 @@ onMounted(loadAll);
         </label>
         <label>
           Status
-          <input v-model="newEvent.status" />
+          <select v-model="newEvent.status">
+            <option v-for="status in statusOptions" :key="status" :value="status">
+              {{ status }}
+            </option>
+          </select>
         </label>
         <label class="full">
           Description
@@ -411,7 +459,11 @@ onMounted(loadAll);
         </label>
         <label>
           Status
-          <input v-model="newPerson.status" />
+          <select v-model="newPerson.status">
+            <option v-for="status in statusOptions" :key="status" :value="status">
+              {{ status }}
+            </option>
+          </select>
         </label>
         <label class="full">
           Bio
@@ -441,7 +493,11 @@ onMounted(loadAll);
         </label>
         <label>
           Status
-          <input v-model="newGroup.status" />
+          <select v-model="newGroup.status">
+            <option v-for="status in statusOptions" :key="status" :value="status">
+              {{ status }}
+            </option>
+          </select>
         </label>
         <label class="full">
           Bio
@@ -479,7 +535,11 @@ onMounted(loadAll);
         </label>
         <label>
           Status
-          <input v-model="newPlace.status" />
+          <select v-model="newPlace.status">
+            <option v-for="status in statusOptions" :key="status" :value="status">
+              {{ status }}
+            </option>
+          </select>
         </label>
         <div class="actions">
           <button @click="createPlace">Save place</button>
@@ -634,7 +694,16 @@ onMounted(loadAll);
                   </label>
                   <label>
                     Status
-                    <input v-model="editableRows[event.id].status" />
+                    <select v-model="editableRows[event.id].status">
+                      <option value="">(none)</option>
+                      <option
+                        v-for="status in statusOptions"
+                        :key="status"
+                        :value="status"
+                      >
+                        {{ status }}
+                      </option>
+                    </select>
                   </label>
                   <label class="full">
                     Description
@@ -690,7 +759,19 @@ onMounted(loadAll);
 
 .header-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #101521;
+  border: 1px solid #24293a;
+  min-width: 110px;
 }
 
 .dashboard {

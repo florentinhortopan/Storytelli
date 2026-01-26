@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS events (
   status text,
   notes text,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT events_status_check
+    CHECK (status IS NULL OR status IN ('draft', 'review', 'published'))
 );
 
 CREATE TABLE IF NOT EXISTS people (
@@ -30,7 +32,9 @@ CREATE TABLE IF NOT EXISTS people (
   slug text,
   status text,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT people_status_check
+    CHECK (status IS NULL OR status IN ('draft', 'review', 'published'))
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -43,7 +47,9 @@ CREATE TABLE IF NOT EXISTS groups (
   bio text,
   status text,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT groups_status_check
+    CHECK (status IS NULL OR status IN ('draft', 'review', 'published'))
 );
 
 CREATE TABLE IF NOT EXISTS places (
@@ -58,7 +64,9 @@ CREATE TABLE IF NOT EXISTS places (
   slug text,
   status text,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  updated_at timestamptz DEFAULT now(),
+  CONSTRAINT places_status_check
+    CHECK (status IS NULL OR status IN ('draft', 'review', 'published'))
 );
 
 CREATE TABLE IF NOT EXISTS organizations (

@@ -32,6 +32,40 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+app.get("/api/stats", async (req, res) => {
+  const [
+    events,
+    people,
+    groups,
+    places,
+    eventPeople,
+    eventGroups,
+    eventPlaces,
+  ] = await Promise.all([
+    db.query("SELECT COUNT(*)::int AS count FROM events"),
+    db.query("SELECT COUNT(*)::int AS count FROM people"),
+    db.query("SELECT COUNT(*)::int AS count FROM groups"),
+    db.query("SELECT COUNT(*)::int AS count FROM places"),
+    db.query("SELECT COUNT(*)::int AS count FROM event_people"),
+    db.query("SELECT COUNT(*)::int AS count FROM event_groups"),
+    db.query("SELECT COUNT(*)::int AS count FROM event_places"),
+  ]);
+
+  res.json({
+    totals: {
+      events: events.rows[0].count,
+      people: people.rows[0].count,
+      groups: groups.rows[0].count,
+      places: places.rows[0].count,
+    },
+    links: {
+      event_people: eventPeople.rows[0].count,
+      event_groups: eventGroups.rows[0].count,
+      event_places: eventPlaces.rows[0].count,
+    },
+  });
+});
+
 app.get("/api/events", async (req, res) => {
   const result = await db.query(
     "SELECT * FROM events ORDER BY event_date NULLS LAST, title ASC"
@@ -92,6 +126,7 @@ app.put("/api/events/:id", async (req, res) => {
     "notes",
   ]);
   if (data.tags !== undefined) data.tags = parseTags(data.tags);
+  if (data.status === "") data.status = null;
   const fields = Object.keys(data);
   if (!fields.length) {
     return res.status(400).json({ error: "No fields to update" });
