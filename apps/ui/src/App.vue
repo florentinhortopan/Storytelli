@@ -279,17 +279,26 @@ onMounted(loadAll);
 
 <template>
   <div class="page">
-    <header>
-      <h1>GLESSI Data Builder</h1>
-      <p>
-        Insert and link historical data for events, people, groups, and places.
-      </p>
+    <header class="page-header">
+      <div>
+        <h1>GLESSI Data Builder</h1>
+        <p>
+          Insert and link historical data for events, people, groups, and
+          places.
+        </p>
+      </div>
+      <div class="header-meta">
+        <span class="muted">Events: {{ events.length }}</span>
+        <span class="muted">People: {{ people.length }}</span>
+      </div>
     </header>
 
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     <p v-if="isLoading" class="muted">Loading data…</p>
 
-    <section class="card">
+    <div class="dashboard">
+      <aside class="sidebar">
+        <section class="card">
       <div class="card-header">
   <div>
           <h2>Create record</h2>
@@ -476,170 +485,181 @@ onMounted(loadAll);
           <button @click="createPlace">Save place</button>
         </div>
       </div>
-    </section>
+        </section>
 
-    <section class="card">
-      <h2>Link entities to event</h2>
-      <div class="grid">
-        <label>
-          Event
-          <select v-model="linkForm.eventId">
-            <option value="" disabled>Select event</option>
-            <option v-for="event in events" :key="event.id" :value="event.id">
-              {{ event.title }}
-            </option>
-          </select>
-        </label>
-        <label>
-          Type
-          <select v-model="linkForm.type">
-            <option value="people">Person</option>
-            <option value="groups">Group</option>
-            <option value="places">Place</option>
-          </select>
-        </label>
-        <label>
-          Entity
-          <select v-model="linkForm.entityId">
-            <option value="" disabled>Select entity</option>
-            <option v-for="entity in linkOptions" :key="entity.id" :value="entity.id">
-              {{ entity.full_name || entity.name }}
-            </option>
-          </select>
-        </label>
-      </div>
-      <button @click="linkEntity">Link</button>
-    </section>
-
-    <section class="card">
-      <div class="toolbar">
-        <div class="search">
-          <input
-            v-model="searchTerm"
-            placeholder="Search by title, type, place, tag…"
-          />
-        </div>
-        <div class="controls">
-          <label>
-            Sort
-            <select v-model="sortBy">
-              <option value="date_desc">Date (newest)</option>
-              <option value="date_asc">Date (oldest)</option>
-              <option value="title_asc">Title (A → Z)</option>
-              <option value="title_desc">Title (Z → A)</option>
-            </select>
-          </label>
-          <button class="ghost" @click="clearSelection">
-            Clear selection
-          </button>
-          <button class="ghost" disabled>
-            Batch: Tag
-          </button>
-          <button class="ghost" disabled>
-            Batch: Status
-          </button>
-        </div>
-      </div>
-
-      <div class="list">
-        <div class="list-header">
-          <label class="checkbox">
-            <input
-              type="checkbox"
-              :checked="selectedIds.size === filteredEvents.length"
-              @change="toggleSelectAll"
-            />
-            <span>Select all</span>
-          </label>
-          <span class="muted">{{ filteredEvents.length }} results</span>
-        </div>
-
-        <article
-          v-for="event in filteredEvents"
-          :key="event.id"
-          class="row"
-        >
-          <div class="row-main">
-            <label class="checkbox">
-              <input
-                type="checkbox"
-                :checked="selectedIds.has(event.id)"
-                @change="toggleSelected(event.id)"
-              />
+        <section class="card">
+          <h2>Link entities to event</h2>
+          <div class="grid">
+            <label>
+              Event
+              <select v-model="linkForm.eventId">
+                <option value="" disabled>Select event</option>
+                <option v-for="event in events" :key="event.id" :value="event.id">
+                  {{ event.title }}
+                </option>
+              </select>
             </label>
-            <button class="expand" @click="toggleExpanded(event.id)">
-              {{ expandedIds.has(event.id) ? "−" : "+" }}
-            </button>
-            <div class="row-content">
-              <strong>{{ event.title || "Untitled event" }}</strong>
-              <p class="muted">
-                {{ event.event_date || "No date" }} ·
-                {{ event.type || "No type" }}
-              </p>
+            <label>
+              Type
+              <select v-model="linkForm.type">
+                <option value="people">Person</option>
+                <option value="groups">Group</option>
+                <option value="places">Place</option>
+              </select>
+            </label>
+            <label>
+              Entity
+              <select v-model="linkForm.entityId">
+                <option value="" disabled>Select entity</option>
+                <option
+                  v-for="entity in linkOptions"
+                  :key="entity.id"
+                  :value="entity.id"
+                >
+                  {{ entity.full_name || entity.name }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <button @click="linkEntity">Link</button>
+        </section>
+      </aside>
+
+      <main class="content">
+        <section class="card">
+          <div class="toolbar">
+            <div class="search">
+              <input
+                v-model="searchTerm"
+                placeholder="Search by title, type, place, tag…"
+              />
             </div>
-            <span class="pill">{{ event.status || "draft" }}</span>
+            <div class="controls">
+              <label>
+                Sort
+                <select v-model="sortBy">
+                  <option value="date_desc">Date (newest)</option>
+                  <option value="date_asc">Date (oldest)</option>
+                  <option value="title_asc">Title (A → Z)</option>
+                  <option value="title_desc">Title (Z → A)</option>
+                </select>
+              </label>
+              <button class="ghost" @click="clearSelection">
+                Clear selection
+              </button>
+              <button class="ghost" disabled>
+                Batch: Tag
+              </button>
+              <button class="ghost" disabled>
+                Batch: Status
+              </button>
+            </div>
           </div>
 
-          <div v-if="expandedIds.has(event.id)" class="row-detail">
-            <div class="grid">
-              <label>
-                Title
-                <input v-model="editableRows[event.id].title" />
+          <div class="list">
+            <div class="list-header">
+              <label class="checkbox">
+                <input
+                  type="checkbox"
+                  :checked="selectedIds.size === filteredEvents.length"
+                  @change="toggleSelectAll"
+                />
+                <span>Select all</span>
               </label>
-              <label>
-                Date
-                <input v-model="editableRows[event.id].event_date" type="date" />
-              </label>
-              <label>
-                Type
-                <input v-model="editableRows[event.id].type" />
-              </label>
-              <label>
-                Genre
-                <input v-model="editableRows[event.id].genre" />
-              </label>
-              <label>
-                Series
-                <input v-model="editableRows[event.id].series" />
-              </label>
-              <label>
-                Tags
-                <input v-model="editableRows[event.id].tags" />
-              </label>
-              <label>
-                Place
-                <input v-model="editableRows[event.id].place_text" />
-              </label>
-              <label>
-                Slug
-                <input v-model="editableRows[event.id].slug" />
-              </label>
-              <label>
-                Status
-                <input v-model="editableRows[event.id].status" />
-              </label>
-              <label class="full">
-                Description
-                <textarea
-                  v-model="editableRows[event.id].description"
-                  rows="3"
-                ></textarea>
-              </label>
-              <label class="full">
-                Notes
-                <textarea
-                  v-model="editableRows[event.id].notes"
-                  rows="2"
-                ></textarea>
-              </label>
+              <span class="muted">{{ filteredEvents.length }} results</span>
             </div>
-            <div class="actions">
-              <button @click="saveEvent(event.id)">Save changes</button>
-            </div>
+
+            <article
+              v-for="event in filteredEvents"
+              :key="event.id"
+              class="row"
+            >
+              <div class="row-main">
+                <label class="checkbox">
+                  <input
+                    type="checkbox"
+                    :checked="selectedIds.has(event.id)"
+                    @change="toggleSelected(event.id)"
+                  />
+                </label>
+                <button class="expand" @click="toggleExpanded(event.id)">
+                  {{ expandedIds.has(event.id) ? "−" : "+" }}
+                </button>
+                <div class="row-content">
+                  <strong>{{ event.title || "Untitled event" }}</strong>
+                  <p class="muted">
+                    {{ event.event_date || "No date" }} ·
+                    {{ event.type || "No type" }}
+                  </p>
+                </div>
+                <span class="pill">{{ event.status || "draft" }}</span>
+              </div>
+
+              <div v-if="expandedIds.has(event.id)" class="row-detail">
+                <div class="grid">
+                  <label>
+                    Title
+                    <input v-model="editableRows[event.id].title" />
+                  </label>
+                  <label>
+                    Date
+                    <input
+                      v-model="editableRows[event.id].event_date"
+                      type="date"
+                    />
+                  </label>
+                  <label>
+                    Type
+                    <input v-model="editableRows[event.id].type" />
+                  </label>
+                  <label>
+                    Genre
+                    <input v-model="editableRows[event.id].genre" />
+                  </label>
+                  <label>
+                    Series
+                    <input v-model="editableRows[event.id].series" />
+                  </label>
+                  <label>
+                    Tags
+                    <input v-model="editableRows[event.id].tags" />
+                  </label>
+                  <label>
+                    Place
+                    <input v-model="editableRows[event.id].place_text" />
+                  </label>
+                  <label>
+                    Slug
+                    <input v-model="editableRows[event.id].slug" />
+                  </label>
+                  <label>
+                    Status
+                    <input v-model="editableRows[event.id].status" />
+                  </label>
+                  <label class="full">
+                    Description
+                    <textarea
+                      v-model="editableRows[event.id].description"
+                      rows="3"
+                    ></textarea>
+                  </label>
+                  <label class="full">
+                    Notes
+                    <textarea
+                      v-model="editableRows[event.id].notes"
+                      rows="2"
+                    ></textarea>
+                  </label>
+                </div>
+                <div class="actions">
+                  <button @click="saveEvent(event.id)">Save changes</button>
+                </div>
+              </div>
+            </article>
           </div>
-        </article>
-      </div>
-    </section>
+        </section>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -652,12 +672,42 @@ onMounted(loadAll);
 }
 
 .page {
-  max-width: 1100px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 32px 20px 80px;
+  padding: 24px 20px 80px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-meta {
+  display: flex;
+  gap: 12px;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.content {
+  min-width: 0;
 }
 
 header h1 {
@@ -882,5 +932,16 @@ button:hover {
 
 .checkbox input {
   accent-color: #4f8bff;
+}
+
+@media (max-width: 960px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .content {
+    width: 100%;
+  }
 }
 </style>
