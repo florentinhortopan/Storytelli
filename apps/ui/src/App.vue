@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import cytoscape from "cytoscape";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { api } from "./lib/api";
 
 const events = ref<any[]>([]);
@@ -76,6 +77,13 @@ const linkForm = reactive({
   type: "people",
   entityId: "",
 });
+
+const viewMode = ref<"list" | "graph">("list");
+const graphExpanded = ref(true);
+const graphPreviewRef = ref<HTMLDivElement | null>(null);
+const graphFullRef = ref<HTMLDivElement | null>(null);
+const cyPreview = ref<cytoscape.Core | null>(null);
+const cyFull = ref<cytoscape.Core | null>(null);
 
 const searchTerm = ref("");
 const sortBy = ref<"date_desc" | "date_asc" | "title_asc" | "title_desc">(
@@ -291,6 +299,130 @@ const saveEvent = async (id: string) => {
 const clearSelection = () => {
   selectedIds.value.clear();
 };
+
+const toKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+const buildGraphElements = () => {
+  const elements: cytoscape.ElementDefinition[] = [];
+  const placeNodes = new Map<string, string>();
+  for (const event of events.value) {
+    const eventId = `event:${event.id}`;
+    elements.push({
+      data: {
+        id: eventId,
+        label: event.title || "Untitled event",
+        type: "event",
+      },
+    });
+    if (event.place_text) {
+      const placeLabel = event.place_text.trim();
+      if (placeLabel) {
+        const placeKey = toKey(placeLabel) || placeLabel;
+        let placeId = placeNodes.get(placeKey);
+        if (!placeId) {
+          placeId = `place:${placeKey}`;
+          placeNodes.set(placeKey, placeId);
+          elements.push({
+            data: {
+              id: placeId,
+              label: placeLabel,
+              type: "place",
+            },
+          });
+        }
+        elements.push({
+          data: {
+            id: `${eventId}__${placeId}`,
+            source: eventId,
+            target: placeId,
+            type: "link",
+          },
+        });
+      }
+    }
+  }
+  return elements;
+};
+
+const renderGraph = (
+  container: HTMLDivElement | null,
+  instance: typeof cyPreview
+) => {
+  if (!container) return;
+  const elements = buildGraphElements();
+  if (instance.value) {
+    instance.value.json({ elements });
+    instance.value.layout({ name: "cose", animate: false }).run();
+    return;
+  }
+  instance.value = cytoscape({
+    container,
+    elements,
+    style: [
+      {
+        selector: "node",
+        style: {
+          label: "data(label)",
+          "text-wrap": "wrap",
+          "text-max-width": "120px",
+          "font-size": "10px",
+          color: "#e5e7eb",
+          "text-outline-width": 2,
+          "text-outline-color": "#0b0c10",
+        },
+      },
+      {
+        selector: 'node[type = "event"]',
+        style: {
+          "background-color": "#4f8bff",
+          width: "36px",
+          height: "36px",
+        },
+      },
+      {
+        selector: 'node[type = "place"]',
+        style: {
+          "background-color": "#fbbf24",
+          width: "28px",
+          height: "28px",
+        },
+      },
+      {
+        selector: "edge",
+        style: {
+          width: 1,
+          "line-color": "#39405a",
+          "target-arrow-color": "#39405a",
+          "target-arrow-shape": "triangle",
+          "curve-style": "bezier",
+        },
+      },
+    ],
+    layout: { name: "cose", animate: false },
+    wheelSensitivity: 0.2,
+  });
+};
+
+watch(
+  () => events.value,
+  () => {
+    renderGraph(graphPreviewRef.value, cyPreview);
+    if (viewMode.value === "graph") {
+      renderGraph(graphFullRef.value, cyFull);
+    }
+  },
+  { deep: true }
+);
+
+watch(viewMode, () => {
+  if (viewMode.value === "graph") {
+    setTimeout(() => renderGraph(graphFullRef.value, cyFull), 0);
+  }
+});
 
 onMounted(loadAll);
 </script>
@@ -583,10 +715,38 @@ onMounted(loadAll);
           </div>
           <button @click="linkEntity">Link</button>
         </section>
+
+        <section class="card">
+          <div class="card-header compact">
+            <div>
+              <h2>Graph view</h2>
+              <p class="muted">Explore event ↔ place connections.</p>
+            </div>
+            <button class="ghost small" @click="graphExpanded = !graphExpanded">
+              {{ graphExpanded ? "Hide" : "Show" }}
+            </button>
+          </div>
+          <div v-if="graphExpanded" class="graph-preview">
+            <div ref="graphPreviewRef" class="graph-canvas"></div>
+            <button @click="viewMode = 'graph'">Open full page</button>
+          </div>
+        </section>
       </aside>
 
       <main class="content">
-        <section class="card">
+        <section v-if="viewMode === 'graph'" class="card graph-full">
+          <div class="toolbar">
+            <div class="controls">
+              <button class="ghost" @click="viewMode = 'list'">
+                Back to list
+              </button>
+              <span class="muted">Graph navigation</span>
+            </div>
+          </div>
+          <div ref="graphFullRef" class="graph-canvas graph-full-canvas"></div>
+        </section>
+
+        <section v-else class="card">
           <div class="toolbar">
             <div class="search">
               <input
@@ -889,6 +1049,12 @@ button:hover {
   margin-bottom: 16px;
 }
 
+.card-header.compact {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -952,6 +1118,11 @@ button:hover {
   background: #1b2131;
 }
 
+.ghost.small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
 .list-header {
   display: flex;
   align-items: center;
@@ -1013,6 +1184,29 @@ button:hover {
 
 .checkbox input {
   accent-color: #4f8bff;
+}
+
+.graph-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.graph-canvas {
+  width: 100%;
+  height: 220px;
+  border-radius: 12px;
+  border: 1px solid #24293a;
+  background: #0f111a;
+}
+
+.graph-full {
+  min-height: 520px;
+}
+
+.graph-full-canvas {
+  height: 70vh;
+  min-height: 420px;
 }
 
 @media (max-width: 960px) {
