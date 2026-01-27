@@ -444,7 +444,7 @@ onMounted(() => {
   <div class="page">
     <header class="page-header">
       <div>
-        <h1>GLESSI Data Builder</h1>
+        <h1>Storytelli Data Builder</h1>
         <p>
           Insert and link historical data for events, people, groups, and
           places.
