@@ -3,13 +3,16 @@
   "private": true,
   "workspaces": [
     "apps/ui",
-    "apps/api"
+    "apps/api",
+    "apps/relay"
   ],
   "scripts": {
     "build": "npm --prefix apps/ui run build",
     "dev": "npm --prefix apps/ui run dev",
     "dev:api": "npm --prefix apps/api run dev",
+    "dev:relay": "npm --prefix apps/relay run dev",
     "start": "npm --prefix apps/api run start",
+    "start:relay": "npm --prefix apps/relay run start",
     "import-csv": "npm --prefix apps/api run import-csv"
   }
 }
